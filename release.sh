@@ -108,7 +108,7 @@ for platform in "${PLATFORMS[@]}"
 do
     for arch in "${ARCHES[@]}"
     do
-        echo "compiling the backend for $platform-$arch"
+        echo "compiling for $platform-$arch"
         mkdir build/$platform-$arch
 
         GOOS=$platform
