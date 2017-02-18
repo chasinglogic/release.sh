@@ -59,28 +59,30 @@ TAG_NAME=$1
 RELEASE_NAME=$2
 PRERELEASE=$3
 STARTING_DIR=$(pwd)
-PROGRAM=`pwd | awk -F\/ '{print $(NF)}'`
+
+if [ -z "$PROGRAM" ]; then
+    PROGRAM=`pwd | awk -F\/ '{print $(NF)}'`
+fi
+
+if [ -z "$ARCHES" ]; then
+    ARCHES=("amd64" "386")
+fi
+if [ -z "$platforms" ]; then
+    PLATFORMS=("linux" "darwin" "windows")
+fi
+
 
 echo "Tag Name: $TAG_NAME"
 echo "Release Name: $RELEASE_NAME"
 echo "Prelease: $PRERELEASE"
 echo "Program: $PROGRAM"
-echo ""
+echo "Building for Arches: $ARCHES"
+echo "Building for Platforms: $PLATFORMS"
 
 echo "Checking for dependencies..."
 if ! [ -x "$(command -v go)" ]; then
     echo "You need to install the go tool. https://golang.org/download"
     exit 1
-fi
-
-# TODO remove this if not using glide
-if ! [ -x "$(command -v glide)" ]; then
-    echo "glide not detected attempting to install..."
-    go get github.com/Masterminds/glide
-    if ! [ -x "$(command -v glide)" ]; then
-        echo "installed glide but \$GOBIN isn't in \$PATH"
-        exit 1
-    fi
 fi
 
 if [ -d "build" ]; then
@@ -90,35 +92,39 @@ fi
 
 # create the final build directories
 mkdir build/
-mkdir build/{linux,windows,darwin}
 
 # install deps 
 echo "installing dependencies"
-glide install
+if [ -x "$(command -v glide)" ] || [ -f "glide.yaml" ]; then
+    echo "glide detected using it to install dependencies..."
+    glide install
+else
+    go get ./...
+fi
 
-# TODO change these to taste
-arches=("amd64" "386")
-platforms=("linux" "darwin" "windows")
 
-for platform in "${platforms[@]}"
+for platform in "${PLATFORMS[@]}"
 do
-    for arch in "${arches[@]}"
+    for arch in "${ARCHES[@]}"
     do
         echo "compiling the backend for $platform-$arch"
+        mkdir build/$platform-$arch
+
         if [ "$platform" == "windows" ]; then
             GOOS=$platform GOARCH=$arch go build -o build/$GOOS-$GOARCH/$PROGRAM.exe >/dev/null
         else
             GOOS=$platform GOARCH=$arch go build -o build/$GOOS-$GOARCH/$PROGRAM >/dev/null
         fi
+
+        # make sure builds worked
         check_if_success
 
         echo "building release tar"
-        cd build/$GOOS-$GOARCH
+        cd build/$platform-$arch
 
         PACKAGE_NAME="$PROGRAM-$TAG_NAME-$platform-$arch.tar.gz"
-
-        if ! [ -z "$PRERELEASE" ]; then
-            PACKAGE_NAME="$PROGRAM-$TAG_NAME-prelease-$GOOS-$GOARCH.tar.gz"
+        if [ "$platform" == "windows" ]; then
+            PACKAGE_NAME="$PROGRAM-$TAG_NAME-$platform-$arch.zip"
         fi
 
         echo $PACKAGE_NAME
@@ -128,7 +134,11 @@ do
             rm $STARTING_DIR/$PACKAGE_NAME
         fi
 
-        tar czf $STARTING_DIR/$PACKAGE_NAME *
+        if [ "$platform" == "windows" ]; then
+            zip $STARTING_DIR/$PACKAGE_NAME *
+        else
+            tar czf $STARTING_DIR/$PACKAGE_NAME *
+        fi
 
         cd $STARTING_DIR
     done
