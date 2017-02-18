@@ -84,8 +84,6 @@ echo "Building for Arches: ${ARCHES[@]}"
 echo "Building for Platforms: ${PLATFORMS[@]}"
 echo "Repo Owner: $OWNER"
 
-exit 0
-
 echo "Checking for dependencies..."
 if ! [ -x "$(command -v go)" ]; then
     echo "You need to install the go tool. https://golang.org/download"
@@ -118,10 +116,12 @@ do
         echo "compiling the backend for $platform-$arch"
         mkdir build/$platform-$arch
 
+        GOOS=$platform
+        GOARCH=$arch 
         if [ "$platform" == "windows" ]; then
-            GOOS=$platform GOARCH=$arch go build -o build/$GOOS-$GOARCH/$PROGRAM.exe >/dev/null
+            go build -o build/$GOOS-$GOARCH/$PROGRAM.exe >/dev/null
         else
-            GOOS=$platform GOARCH=$arch go build -o build/$GOOS-$GOARCH/$PROGRAM >/dev/null
+            go build -o build/$GOOS-$GOARCH/$PROGRAM >/dev/null
         fi
 
         # make sure builds worked
@@ -173,12 +173,13 @@ echo $JSON
 echo $GITHUB_URL
 
 RESP=$(curl -X POST --data "$JSON" $GITHUB_URL)
-ASSETS_URL=$(echo "$RESP" | grep -oP '(?<="assets_url": ")(.*)(?=")')
+ASSETS_URL=$(echo "$RESP" | grep -oP '(?<="upload_url": ")(.*assets)')
 
 for pkg in "${PACKAGES[@]}"
 do
     echo "uploading $pkg"
-    UPLOAD_URL="$ASSETS_URL?name=$PKG&access_token=$GITHUB_API_TOKEN"
+    UPLOAD_URL="$ASSETS_URL?name=$pkg&access_token=$GITHUB_API_TOKEN"
+    echo $UPLOAD_URL
 
     if [ -z "$(echo $pkg | grep -o ".zip")" ]; then
         HEADERS="Content-Type:application/zip"
@@ -186,5 +187,5 @@ do
         HEADERS="Content-Type:application/gzip"
     fi
 
-    curl -X POST --headers $HEADERS --data-binary $STARTING_DIR/$pkg $UPLOAD_URL
+    curl -X POST -H $HEADERS --data-binary $STARTING_DIR/$pkg $UPLOAD_URL >/dev/null
 done
