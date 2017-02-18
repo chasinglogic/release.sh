@@ -2,20 +2,13 @@
 # 
 # Author: Mathew Robinson <chasinglogic@gmail.com>
 # 
-# This script builds fnd and deploys it to Github
+# This script builds go projects and deploys them to Github
 #
 
 function parse_git_branch {
     ref=$(git symbolic-ref HEAD 2> /dev/null) || return
     echo "${ref#refs/heads/} "
 }
-
-BRANCH=$(parse_git_branch)
-
-if [ $BRANCH != "master" ] && [ $BRANCH != "develop" ]; then
-    echo "you aren't on master or develop, refusing to package a release"
-    exit 1
-fi
 
 function check_if_success() {
     if [ $? -ne 0 ]; then
@@ -26,23 +19,25 @@ function check_if_success() {
 
 function print_help() {
     echo "Usage: 
-    ./package.sh tag_name name_of_release prelease_bool:optional
+    ./release.sh tag_name name_of_release prelease_bool:optional
 
 Examples:
     This would deploy to tag v0.0.1 naming the release MVP and specify it is a 
     prerelease
 
-    ./package.sh v0.0.1 MVP true
+    ./release.sh v0.0.1 MVP true
 
-    This would deploy to tag v1.0.0 naming the release Aces High and specify it
-    as not a prerelease
+    If the 3rd argument is omitted we assume it is a normal release
 
-    ./package.sh v1.0.0 \"Aces High\" false
-
-    Alternatively prelease_bool can be omitted (defaults: false)
-
-    ./package.sh v1.0.0 \"Aces High\""
+    ./release.sh v1.0.0 \"Aces High\""
 }
+
+BRANCH=$(parse_git_branch)
+
+if [ $BRANCH != "master" ] && [ $BRANCH != "develop" ]; then
+    echo "you aren't on master or develop, refusing to package a release"
+    exit 1
+fi
 
 if [ "$1" == "--help" ] || [ "-h" == "$1" ]; then
     print_help
@@ -168,9 +163,6 @@ fi
 
 GITHUB_URL="https://api.github.com/repos/$OWNER/$PROGRAM/releases?access_token=$GITHUB_API_TOKEN"
 JSON="{ \"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$PROGRAM release $RELEASE_NAME\", \"target_commitsh\": \"master\" }"
-
-echo $JSON
-echo $GITHUB_URL
 
 RESP=$(curl -X POST --data "$JSON" $GITHUB_URL)
 ASSETS_URL=$(echo "$RESP" | grep -oP '(?<="upload_url": ")(.*assets)')
