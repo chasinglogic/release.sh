@@ -11,7 +11,7 @@ everyone.
 
 First you'll want some optional environment variables setup:
 
-`ARCHES` && `PLATFORMS`
+`$ARCHES` && `$PLATFORMS`
 
 These are arrays of the platforms and architectures you want to build for, the
 defaults are `("amd64" "386")` and `("linux" "darwin" "windows")` respectively
@@ -36,6 +36,10 @@ anyway:
 
 `curl -OSL https://raw.githubusercontent.com/chasinglogic/release.sh/master/release.sh`
 
+Then set the executable permission on the downloaded script
+
+`chmod +x release.sh`
+
 ### Use
 
 ```
@@ -54,3 +58,6 @@ Examples:
 ```
 
 **NOTE:** If you specify any third argument it is assumed you want a prelease.
+
+You should run release.sh in the root of your project directory otherwise
+strange things may happen and you'll end up in the upside down.
