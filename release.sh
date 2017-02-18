@@ -60,6 +60,10 @@ RELEASE_NAME=$2
 PRERELEASE=$3
 STARTING_DIR=$(pwd)
 
+if [ -z "$OWNER" ]; then
+    OWNER=$USER
+fi
+
 if [ -z "$PROGRAM" ]; then
     PROGRAM=`pwd | awk -F\/ '{print $(NF)}'`
 fi
@@ -67,17 +71,20 @@ fi
 if [ -z "$ARCHES" ]; then
     ARCHES=("amd64" "386")
 fi
-if [ -z "$platforms" ]; then
+
+if [ -z "$PLATFORMS" ]; then
     PLATFORMS=("linux" "darwin" "windows")
 fi
-
 
 echo "Tag Name: $TAG_NAME"
 echo "Release Name: $RELEASE_NAME"
 echo "Prelease: $PRERELEASE"
 echo "Program: $PROGRAM"
-echo "Building for Arches: $ARCHES"
-echo "Building for Platforms: $PLATFORMS"
+echo "Building for Arches: ${ARCHES[@]}"
+echo "Building for Platforms: ${PLATFORMS[@]}"
+echo "Repo Owner: $OWNER"
+
+exit 0
 
 echo "Checking for dependencies..."
 if ! [ -x "$(command -v go)" ]; then
@@ -102,6 +109,7 @@ else
     go get ./...
 fi
 
+PACKAGES=()
 
 for platform in "${PLATFORMS[@]}"
 do
@@ -128,6 +136,7 @@ do
         fi
 
         echo $PACKAGE_NAME
+        PACKAGES+=("$PACKAGE_NAME")
 
         if [ -f "$STARTING_DIR/$PACKAGE_NAME" ]; then
             echo "old package detected removing..."
@@ -157,10 +166,6 @@ if [ -z "$GITHUB_API_TOKEN" ]; then
     exit 0
 fi
 
-if [ -z "$OWNER" ]; then
-    OWNER=$USER
-fi
-
 GITHUB_URL="https://api.github.com/repos/$OWNER/$PROGRAM/releases?access_token=$GITHUB_API_TOKEN"
 JSON="{ \"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$PROGRAM release $RELEASE_NAME\", \"target_commitsh\": \"master\" }"
 
@@ -168,6 +173,18 @@ echo $JSON
 echo $GITHUB_URL
 
 RESP=$(curl -X POST --data "$JSON" $GITHUB_URL)
-UPLOAD_URL=$(echo "$RESP" | grep assets_url | )
+ASSETS_URL=$(echo "$RESP" | grep -oP '(?<="assets_url": ")(.*)(?=")')
 
+for pkg in "${PACKAGES[@]}"
+do
+    echo "uploading $pkg"
+    UPLOAD_URL="$ASSETS_URL?name=$PKG&access_token=$GITHUB_API_TOKEN"
 
+    if [ -z "$(echo $pkg | grep -o ".zip")" ]; then
+        HEADERS="Content-Type:application/zip"
+    else
+        HEADERS="Content-Type:application/gzip"
+    fi
+
+    curl -X POST --headers $HEADERS --data-binary $STARTING_DIR/$pkg $UPLOAD_URL
+done
