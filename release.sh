@@ -150,7 +150,7 @@ done
 
 # create the tag
 echo "tagging release..."
-git tag -a $TAG_NAME -m $RELEASE_NAME
+git tag -a $TAG_NAME -m "$RELEASE_NAME"
 
 # push the tag
 echo "Pushing tags..."
