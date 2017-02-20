@@ -61,3 +61,20 @@ Examples:
 
 You should run release.sh in the root of your project directory otherwise
 strange things may happen and you'll end up in the upside down.
+
+### How It Works
+
+First release.sh will create a folder called `build/` it will then create a
+subfolder for each platform + architecture combination you have such that you
+will end up with multiple folders of the form `build/$platform-$arch` it then
+builds your package for each of those platforms / arches putting the binary in
+the appropriate folder. The binary name will be name specified by `$PROGRAM` with
+the exception of when building for windows it will be `$PROGRAM.exe`. Finally
+once the binary has been created it will tar up the `build/$platform-$arch`
+folder into `$program-$tag_name-$platform-$arch.tar.gz` again the exception
+here being windows where it will use zip instead of tar creating 
+`$program-$tag_name-$platform-$arch.zip`. Finally it creates the release on
+github using the REST API and uploads the artifacts to that release. The "body"
+of the release on github will simply be "$PROGRAM release $RELEASE_NAME" if you
+want release notes you'll have to go edit the release, eventually I'll add
+support for the release notes being added for you.
