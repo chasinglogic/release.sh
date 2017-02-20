@@ -110,6 +110,9 @@ do
     do
         echo "compiling for $platform-$arch"
         mkdir build/$platform-$arch
+        
+        cp $STARTING_DIR/LICENSE $STARTING_DIR/build/$platform-$arch
+        cp $STARTING_DIR/README.md $STARTING_DIR/build/$platform-$arch
 
         GOOS=$platform
         GOARCH=$arch 
