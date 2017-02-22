@@ -179,5 +179,5 @@ do
         HEADERS="Content-Type:application/gzip"
     fi
 
-    curl -X POST -H $HEADERS --data-binary $STARTING_DIR/$pkg $UPLOAD_URL >/dev/null
+    curl -X POST -H $HEADERS -T $STARTING_DIR/$pkg $UPLOAD_URL >/dev/null
 done
