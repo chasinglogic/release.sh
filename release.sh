@@ -110,6 +110,9 @@ do
     do
         echo "compiling for $platform-$arch"
         mkdir build/$platform-$arch
+        
+        cp $STARTING_DIR/LICENSE $STARTING_DIR/build/$platform-$arch
+        cp $STARTING_DIR/README.md $STARTING_DIR/build/$platform-$arch
 
         GOOS=$platform
         GOARCH=$arch 
@@ -165,7 +168,19 @@ GITHUB_URL="https://api.github.com/repos/$OWNER/$PROGRAM/releases?access_token=$
 JSON="{ \"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$PROGRAM release $RELEASE_NAME\", \"target_commitsh\": \"master\" }"
 
 RESP=$(curl -X POST --data "$JSON" $GITHUB_URL)
-ASSETS_URL=$(echo "$RESP" | grep -oP '(?<="upload_url": ")(.*assets)')
+
+if [ -x "$(command -v perl)" ]; then
+    # perl is more compatible as it doesn't require GNU grep so default to that
+    ASSETS_URL=$(echo "$RESP" | perl -nle 'print $& if m{(?<="upload_url": ")(.*assets)}')
+else
+    # try grabbing with GNU grep if perl isn't installed
+    ASSETS_URL=$(echo "$RESP" | grep -oP '(?<="upload_url": ")(.*assets)')
+fi
+
+if [ "$ASSETS_URL" == "" ]; then
+    echo "you do not have GNU grep or perl installed. can't get upload_url"
+    exit 0
+fi
 
 for pkg in "${PACKAGES[@]}"
 do
